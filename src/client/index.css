@@ -1,17 +1,23 @@
-/* Import Font */
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+/* Import Fonts */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
 @theme {
-    --font-mono: "Space Mono", monospace;
+    --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
 
-    --color-nerdle-dark: #0f1115;
-    --color-nerdle-gray: #3a3a3c;
-    --color-nerdle-purple: #8208e6;
-    --color-nerdle-green: #00e676;
-    /* Vibrant Green */
-    --color-nerdle-black: #121213;
+    /* Relaxing beige/cream book theme */
+    --color-book-bg: #f5f1e8;
+    --color-book-paper: #fdfbf7;
+    --color-book-text: #2d2416;
+    --color-book-border: #d4c5a9;
+    --color-book-accent: #8b7355;
+    --color-book-green: #7a9b76;
+    --color-book-correct: #6b8e6b;
+    --color-book-present: #c9a961;
+    --color-book-absent: #b8a892;
 
     --animate-flip: flip 0.6s ease-in-out forwards;
     --animate-shake: shake 0.6s ease-in-out;
@@ -70,11 +76,8 @@
     }
 }
 
-/* Import Font */
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-
 body {
-    background-color: var(--color-nerdle-dark);
-    color: white;
-    font-family: var(--font-mono);
+    background-color: var(--color-book-bg);
+    color: var(--color-book-text);
+    font-family: var(--font-sans);
 }

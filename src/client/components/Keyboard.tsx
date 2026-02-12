@@ -13,8 +13,7 @@ interface KeyboardProps {
 
 const KEYS = [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-    ['+', '-', '*', '/', '='],
-    ['ENTER', 'DELETE']
+    ['DELETE', '+', '-', '*', '/', '=', 'ENTER']
 ];
 
 export function Keyboard({ onChar, onDelete, onEnter, guesses, solution }: KeyboardProps) {
@@ -40,9 +39,9 @@ export function Keyboard({ onChar, onDelete, onEnter, guesses, solution }: Keybo
     });
 
     return (
-        <div className="w-full max-w-[500px] mx-auto p-2">
+        <div className="w-full max-w-2xl mx-auto px-1">
             {KEYS.map((row, i) => (
-                <div key={i} className="flex justify-center mb-2 gap-1">
+                <div key={i} className="flex justify-center gap-1 mb-1">
                     {row.map((key) => {
                         const status = charStatuses[key] || 'EMPTY';
                         return (
@@ -72,25 +71,37 @@ interface KeyProps {
 
 function Key({ value, status, onClick }: KeyProps) {
     const statusStyles = {
-        CORRECT: "bg-nerdle-green border-nerdle-green text-black",
-        PRESENT: "bg-nerdle-purple border-nerdle-purple text-white",
-        ABSENT: "bg-nerdle-gray border-nerdle-gray opacity-50 text-white",
-        EMPTY: "bg-gray-700 hover:bg-gray-600 text-white"
+        CORRECT: "bg-book-correct text-white border-book-correct",
+        PRESENT: "bg-book-present text-book-text border-book-present",
+        ABSENT: "bg-book-absent text-book-text/60 border-book-absent",
+        EMPTY: "bg-book-paper text-book-text border-book-border hover:bg-book-bg"
     };
 
-    // Wide keys need slightly different styling
-    const widthClass = value === 'ENTER' || value === 'DELETE' ? "px-4 min-w-[3rem]" : "w-8 sm:w-10";
+    // Wide keys for ENTER and DELETE
+    const isWide = value === 'ENTER' || value === 'DELETE';
+    const isOperator = ['+', '-', '*', '/', '='].includes(value);
+    
+    // Special styling for ENTER button
+    const specialClass = value === 'ENTER' 
+        ? "bg-book-green text-white border-book-green hover:bg-book-correct font-extrabold" 
+        : value === 'DELETE'
+        ? "bg-book-accent text-white border-book-accent hover:bg-opacity-90"
+        : "";
 
     return (
         <button
             onClick={onClick}
             className={clsx(
-                "flex items-center justify-center rounded font-bold text-sm sm:text-base transition-colors h-12 sm:h-14",
-                widthClass,
-                statusStyles[status]
+                "flex items-center justify-center rounded font-bold transition-all active:scale-95 touch-manipulation border-2 shadow-sm",
+                "flex-1 min-w-0",
+                "h-11 text-sm",
+                "sm:h-12 sm:text-base",
+                isWide && "px-2 text-[10px] sm:text-xs font-extrabold",
+                isOperator ? "font-mono text-lg sm:text-xl" : "font-mono",
+                specialClass || statusStyles[status]
             )}
         >
-            {value === 'DELETE' ? '⌫' : value}
+            <span className="truncate">{value === 'DELETE' ? '⌫' : value}</span>
         </button>
     );
 }

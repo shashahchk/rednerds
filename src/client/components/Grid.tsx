@@ -13,7 +13,7 @@ export function Grid({ guesses, currentGuess, solution, isInvalid }: GridProps) 
     const empties = Math.max(0, 6 - guesses.length - 1);
 
     return (
-        <div className="grid grid-rows-6 gap-2 mb-4 w-full max-w-[350px] mx-auto p-2">
+        <div className="grid grid-rows-6 gap-1.5 w-full max-w-md mx-auto">
             {guesses.map((guess, i) => (
                 <Row key={i} guess={guess} solution={solution} />
             ))}
@@ -72,16 +72,16 @@ interface TileProps {
 
 function Tile({ char, status, isCurrent }: TileProps) {
     // Styles based on status
-    const base = "flex items-center justify-center border-2 text-xl font-bold select-none h-10 sm:h-12 rounded transition-all duration-500 transform";
+    const base = "flex items-center justify-center border-2 font-bold select-none aspect-square rounded transition-all duration-500 transform text-base sm:text-lg shadow-sm font-mono";
 
     // Theme colors mapping
     const statusStyles = {
-        CORRECT: "bg-nerdle-green border-nerdle-green",
-        PRESENT: "bg-nerdle-purple border-nerdle-purple",
-        ABSENT: "bg-nerdle-gray border-nerdle-gray",
+        CORRECT: "bg-book-correct border-book-correct text-white",
+        PRESENT: "bg-book-present border-book-present text-book-text",
+        ABSENT: "bg-book-absent border-book-absent text-book-text/60",
         EMPTY: isCurrent && char
-            ? "border-gray-400 animate-pop"
-            : "border-gray-600"
+            ? "border-book-accent bg-book-paper text-book-text animate-pop"
+            : "border-book-border bg-book-paper text-book-text/30"
     };
 
     return (
