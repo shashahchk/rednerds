@@ -22,3 +22,30 @@ export type DailyPuzzleResponse = {
   index: number;
   date: string;
 };
+
+export type LeaderboardEntry = {
+  username: string;
+  attempts: number;
+  timestamp: number;
+  won: boolean;
+};
+
+export type SubmitScoreRequest = {
+  date: string;
+  attempts: number;
+  won: boolean;
+};
+
+export type SubmitScoreResponse = {
+  type: 'submit-score';
+  success: boolean;
+  rank?: number;
+};
+
+export type LeaderboardResponse = {
+  type: 'leaderboard';
+  date: string;
+  entries: LeaderboardEntry[];
+  userEntry?: LeaderboardEntry;
+  userRank?: number;
+};

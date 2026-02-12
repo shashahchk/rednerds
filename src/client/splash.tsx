@@ -7,15 +7,21 @@ import { createRoot } from 'react-dom/client';
 import { useNerdle } from './hooks/useNerdle';
 import { Grid } from './components/Grid';
 import { Keyboard } from './components/Keyboard';
+import { Leaderboard } from './components/Leaderboard';
 import { getDailyEquation } from '../shared/nerdle-logic';
+import type { SubmitScoreRequest } from '../shared/api';
 
 export const Splash = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [solution, setSolution] = useState('');
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
+  const [scoreSubmitted, setScoreSubmitted] = useState(false);
 
   const handleStartGame = () => {
     setSolution(getDailyEquation());
     setGameStarted(true);
+    setCurrentDate(new Date().toISOString().split('T')[0] || '');
   };
 
   const {
@@ -47,14 +53,60 @@ export const Splash = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameStarted, onEnter, onDelete, onChar]);
 
+  // Submit score when game ends
+  useEffect(() => {
+    if (status === 'playing' || scoreSubmitted || !currentDate) return;
+
+    async function submitScore() {
+      try {
+        const payload: SubmitScoreRequest = {
+          date: currentDate,
+          attempts: guesses.length,
+          won: status === 'won',
+        };
+
+        console.log('Submitting score:', payload);
+
+        const response = await fetch('/api/leaderboard/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+        console.log('Submit score response:', result);
+
+        if (result.success) {
+          console.log('Score submitted successfully! Rank:', result.rank);
+          setScoreSubmitted(true);
+        } else {
+          console.log('Score submission failed or already submitted');
+          setScoreSubmitted(true); // Mark as submitted even if already exists
+        }
+      } catch (error) {
+        console.error('Error submitting score:', error);
+      }
+    }
+
+    submitScore();
+  }, [status, guesses.length, currentDate, scoreSubmitted]);
+
   if (gameStarted && solution) {
     return (
       <div className="flex flex-col h-screen w-full bg-book-bg text-book-text overflow-hidden">
         {/* Header */}
-        <header className="flex-shrink-0 py-2 px-3 border-b-2 border-book-border bg-book-paper flex justify-center items-center shadow-sm">
+        <header className="flex-shrink-0 py-2 px-3 border-b-2 border-book-border bg-book-paper flex justify-between items-center shadow-sm">
+          <div className="w-8"></div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-book-accent">
             NERD<span className="text-book-green">ITT</span>
           </h1>
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="text-book-accent hover:text-book-green transition-colors text-xl"
+            aria-label="View Leaderboard"
+          >
+            🏆
+          </button>
         </header>
 
         {/* Game Area */}
@@ -85,13 +137,24 @@ export const Splash = () => {
                 <h2 className="text-xl sm:text-2xl font-bold mb-3 text-book-accent">
                   {status === 'won' ? 'Calculation Correct!' : 'Calculation Failed'}
                 </h2>
-                <p className="mb-4 text-lg sm:text-xl tracking-wider text-book-text font-bold">{solution}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-book-green text-white px-6 py-3 rounded-lg font-bold hover:bg-book-correct transition-colors shadow-md"
-                >
-                  Play Again
-                </button>
+                <p className="mb-2 text-lg sm:text-xl tracking-wider text-book-text font-bold">{solution}</p>
+                <p className="mb-4 text-sm text-book-text/60">
+                  Solved in {guesses.length} {guesses.length === 1 ? 'attempt' : 'attempts'}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowLeaderboard(true)}
+                    className="flex-1 bg-book-accent text-white px-4 py-3 rounded-lg font-bold hover:bg-book-accent/90 transition-colors shadow-md"
+                  >
+                    Leaderboard
+                  </button>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="flex-1 bg-book-green text-white px-4 py-3 rounded-lg font-bold hover:bg-book-correct transition-colors shadow-md"
+                  >
+                    Play Again
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -107,6 +170,14 @@ export const Splash = () => {
             solution={solution}
           />
         </div>
+
+        {/* Leaderboard Modal */}
+        {showLeaderboard && (
+          <Leaderboard
+            date={currentDate}
+            onClose={() => setShowLeaderboard(false)}
+          />
+        )}
       </div>
     );
   }
@@ -115,9 +186,21 @@ export const Splash = () => {
     <div className="flex flex-col h-screen bg-book-bg overflow-y-auto">
       <div className="flex-1 flex flex-col justify-center items-center px-4 py-8">
         <div className="flex flex-col items-center gap-6 max-w-md w-full">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-center text-book-accent tracking-tight">
-            NERD<span className="text-book-green">ITT</span>
-          </h1>
+          <div className="flex items-center justify-center gap-3 w-full">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-center text-book-accent tracking-tight">
+              NERD<span className="text-book-green">ITT</span>
+            </h1>
+            <button
+              onClick={() => {
+                setCurrentDate(new Date().toISOString().split('T')[0] || '');
+                setShowLeaderboard(true);
+              }}
+              className="text-2xl hover:scale-110 transition-transform"
+              aria-label="View Leaderboard"
+            >
+              🏆
+            </button>
+          </div>
           
           <div className="flex flex-col items-center gap-4 text-center w-full">
             <p className="text-lg text-book-text font-medium">
@@ -170,6 +253,14 @@ export const Splash = () => {
           Discord
         </button>
       </footer>
+
+      {/* Leaderboard Modal */}
+      {showLeaderboard && (
+        <Leaderboard
+          date={currentDate}
+          onClose={() => setShowLeaderboard(false)}
+        />
+      )}
     </div>
   );
 };
