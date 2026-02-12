@@ -41,6 +41,14 @@
   "triggers": {
     "onAppInstall": "/internal/triggers/on-app-install"
   },
+  "scheduler": {
+    "tasks": {
+      "daily-post": {
+        "endpoint": "/internal/cron/daily-post",
+        "cron": "0 12 * * *"
+      }
+    }
+  },
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build"

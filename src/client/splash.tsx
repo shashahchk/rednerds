@@ -2,14 +2,101 @@ import './index.css';
 
 import { navigateTo } from '@devvit/web/client';
 import { context } from '@devvit/web/client';
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useNerdle } from './hooks/useNerdle';
 import { Grid } from './components/Grid';
 import { Keyboard } from './components/Keyboard';
 import { Leaderboard } from './components/Leaderboard';
-import { getDailyEquation, generateShareText, getEquationByIndex } from '../shared/nerdle-logic';
+import { getDailyEquation, generateShareText, getEquationByIndex, checkGuess } from '../shared/nerdle-logic';
 import type { SubmitScoreRequest } from '../shared/api';
+
+const PREVIEW_SOLUTION = '12+34=46';
+const PREVIEW_GUESSES = [
+  '13+24=37',
+  '15+30=45',
+  '12+34=46',
+];
+
+const TILE_STAGGER = 100;
+const FLIP_HALF_MS = 300;
+
+function getStatusStyle(status: string | undefined): string {
+  if (status === 'CORRECT') return 'bg-book-correct border-book-correct text-white';
+  if (status === 'PRESENT') return 'bg-book-present border-book-present text-book-text';
+  if (status === 'ABSENT') return 'bg-book-absent border-book-absent text-book-text/60';
+  return 'border-book-border bg-book-paper text-book-text';
+}
+
+function SplashPreviewGrid() {
+  const indexRef = useRef(0);
+  const [displayGuess, setDisplayGuess] = useState(PREVIEW_GUESSES[0]!);
+  const [incomingGuess, setIncomingGuess] = useState<string | null>(null);
+  const [flipId, setFlipId] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextIdx = (indexRef.current + 1) % PREVIEW_GUESSES.length;
+      indexRef.current = nextIdx;
+      setIncomingGuess(PREVIEW_GUESSES[nextIdx]!);
+      setFlipId((k) => k + 1);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // After flip animation finishes, promote incoming to display
+  useEffect(() => {
+    if (!incomingGuess) return;
+    const totalDuration = 7 * TILE_STAGGER + FLIP_HALF_MS * 2 + 100;
+    const timeout = setTimeout(() => {
+      setDisplayGuess(incomingGuess);
+      setIncomingGuess(null);
+    }, totalDuration);
+    return () => clearTimeout(timeout);
+  }, [flipId, incomingGuess]);
+
+  const isFlipping = incomingGuess !== null;
+  const displayStatuses = checkGuess(displayGuess, PREVIEW_SOLUTION);
+  const displayChars = displayGuess.split('');
+  const incomingStatuses = incomingGuess ? checkGuess(incomingGuess, PREVIEW_SOLUTION) : null;
+  const incomingChars = incomingGuess ? incomingGuess.split('') : null;
+
+  return (
+    <div className="my-2 shrink-0 w-full max-w-[280px] sm:max-w-xs">
+      <div className="grid grid-cols-8 gap-1">
+        {displayChars.map((char, i) => (
+          <div key={i} className="relative aspect-square">
+            {/* Current tile — static normally, flips out when transitioning */}
+            <div
+              key={`out-${flipId}`}
+              className={`absolute inset-0 flex items-center justify-center border-2 font-bold select-none rounded text-base sm:text-lg shadow-sm font-mono ${getStatusStyle(displayStatuses[i])}`}
+              style={isFlipping ? {
+                animation: `tile-flip-out ${FLIP_HALF_MS}ms ease-in forwards`,
+                animationDelay: `${i * TILE_STAGGER}ms`,
+              } : undefined}
+            >
+              {char}
+            </div>
+            {/* Incoming tile — flips in after outgoing tile hides */}
+            {isFlipping && incomingChars && incomingStatuses && (
+              <div
+                key={`in-${flipId}`}
+                className={`absolute inset-0 flex items-center justify-center border-2 font-bold select-none rounded text-base sm:text-lg shadow-sm font-mono ${getStatusStyle(incomingStatuses[i])}`}
+                style={{
+                  transform: 'scaleY(0)',
+                  animation: `tile-flip-in ${FLIP_HALF_MS}ms ease-out forwards`,
+                  animationDelay: `${i * TILE_STAGGER + FLIP_HALF_MS}ms`,
+                }}
+              >
+                {incomingChars[i]}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export const Splash = () => {
   const [gameStarted, setGameStarted] = useState(false);
@@ -213,13 +300,15 @@ export const Splash = () => {
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-book-accent">
             NERD<span className="text-book-green">ITT</span>
           </h1>
-          <button
-            onClick={() => setShowLeaderboard(true)}
-            className="text-book-accent hover:text-book-green transition-colors text-xl"
-            aria-label="View Leaderboard"
-          >
-            🏆
-          </button>
+          <div className="w-16 flex justify-end">
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="text-book-accent hover:text-book-green transition-colors text-xl"
+              aria-label="View Leaderboard"
+            >
+              🤓
+            </button>
+          </div>
         </header>
 
         {/* Game Area */}
@@ -296,12 +385,78 @@ export const Splash = () => {
     );
   }
 
+  // Floating symbols positioned in corners/edges, gently drifting
+  const symbols = [
+    // Left edge
+    { char: '+', x: 3, y: 10, size: 28, dur: 6, delay: 0 },
+    { char: '7', x: 8, y: 35, size: 22, dur: 5, delay: 1.5 },
+    { char: '/', x: 5, y: 60, size: 26, dur: 7, delay: 0.8 },
+    { char: '3', x: 10, y: 82, size: 20, dur: 5.5, delay: 2 },
+    { char: '=', x: 2, y: 90, size: 24, dur: 6.5, delay: 0.3 },
+    // Right edge
+    { char: '-', x: 90, y: 12, size: 26, dur: 5.5, delay: 0.5 },
+    { char: '9', x: 88, y: 40, size: 22, dur: 6, delay: 1 },
+    { char: '*', x: 93, y: 65, size: 28, dur: 7, delay: 1.8 },
+    { char: '4', x: 86, y: 85, size: 20, dur: 5, delay: 0.2 },
+    { char: '2', x: 92, y: 92, size: 24, dur: 6.5, delay: 2.5 },
+    // Top corners
+    { char: '8', x: 15, y: 5, size: 20, dur: 5, delay: 1.2 },
+    { char: '+', x: 82, y: 4, size: 22, dur: 6, delay: 0.7 },
+    // Bottom corners
+    { char: '6', x: 14, y: 93, size: 20, dur: 5.5, delay: 1.8 },
+    { char: '=', x: 84, y: 95, size: 22, dur: 6, delay: 2.2 },
+  ];
+
   return (
-    <div className="flex flex-col h-screen bg-book-bg overflow-hidden">
-      <div className="flex-1 flex flex-col justify-center items-center px-4 py-2 min-h-0">
+    <div className="flex flex-col h-screen bg-book-bg overflow-hidden relative">
+      {/* Floating symbols along edges */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {symbols.map((s, i) => (
+          <div
+            key={i}
+            className="absolute font-bold text-book-accent"
+            style={{
+              left: `${s.x}%`,
+              top: `${s.y}%`,
+              fontSize: `${s.size}px`,
+              opacity: 0.12,
+              animation: `drift ${s.dur}s ease-in-out infinite`,
+              animationDelay: `${s.delay}s`,
+            }}
+          >
+            {s.char}
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes tile-flip-out {
+          0% { transform: scaleY(1); }
+          100% { transform: scaleY(0); }
+        }
+        @keyframes tile-flip-in {
+          0% { transform: scaleY(0); }
+          100% { transform: scaleY(1); }
+        }
+        @keyframes drift {
+          0%, 100% {
+            transform: translate(0, 0) rotate(0deg);
+          }
+          25% {
+            transform: translate(6px, -8px) rotate(5deg);
+          }
+          50% {
+            transform: translate(-4px, -14px) rotate(-3deg);
+          }
+          75% {
+            transform: translate(8px, -6px) rotate(4deg);
+          }
+        }
+      `}</style>
+
+      <div className="flex-1 flex flex-col justify-center items-center px-4 py-2 min-h-0 relative z-10">
         <div className="flex flex-col items-center gap-2 max-w-md w-full">
           <div className="flex items-center justify-center gap-3 w-full shrink-0">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-center text-book-accent tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-center text-book-accent tracking-tight drop-shadow-lg">
               NERD<span className="text-book-green">ITT</span>
             </h1>
             <button
@@ -309,10 +464,10 @@ export const Splash = () => {
                 setCurrentDate(new Date().toISOString().split('T')[0] || '');
                 setShowLeaderboard(true);
               }}
-              className="text-xl hover:scale-110 transition-transform"
+              className="text-2xl hover:scale-110 transition-transform"
               aria-label="View Leaderboard"
             >
-              🏆
+              🤓
             </button>
           </div>
 
@@ -320,11 +475,14 @@ export const Splash = () => {
             <p className="text-base text-book-text font-medium shrink-0">
               Hey {context.username ?? 'user'} 👋
             </p>
-            <p className="text-xs text-book-text/80 leading-tight shrink-0">
+            <p className="text-sm text-book-text/80 leading-tight shrink-0 font-semibold">
               A daily math puzzle. Guess the equation in 6 tries.
             </p>
 
-            <div className="bg-book-paper border-2 border-book-border rounded-xl p-3 mt-1 w-full shadow-md overflow-y-auto shrink">
+            {/* Animated Preview Grid */}
+            <SplashPreviewGrid />
+
+            <div className="bg-book-paper border-2 border-book-border rounded-xl p-3 w-full shadow-lg overflow-y-auto shrink backdrop-blur-sm">
               <p className="text-xs text-book-accent mb-2 font-bold">How to play:</p>
               <ul className="text-xs text-book-text/70 space-y-1 text-left leading-tight">
                 <li>• Guess the 8-character equation</li>

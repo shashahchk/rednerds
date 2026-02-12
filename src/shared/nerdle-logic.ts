@@ -1,5 +1,7 @@
 import { EQUATIONS } from './equations';
 
+export const TOTAL_EQUATIONS = EQUATIONS.length;
+
 export type CharStatus = 'CORRECT' | 'PRESENT' | 'ABSENT' | 'EMPTY';
 
 export const EQUATION_LENGTH = 8;

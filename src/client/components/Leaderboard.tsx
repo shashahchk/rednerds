@@ -100,15 +100,15 @@ export function Leaderboard({ date, onClose }: LeaderboardProps) {
                       <div
                         key={`${entry.username}-${index}`}
                         className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${isCurrentUser
-                            ? 'border-book-green bg-book-green/10 shadow-md'
-                            : 'border-book-border bg-book-paper'
+                          ? 'border-book-green bg-book-green/10 shadow-md'
+                          : 'border-book-border bg-book-paper'
                           }`}
                       >
                         <div className={`font-bold text-sm w-7 text-center shrink-0 ${actualRank === 1 ? 'text-yellow-600' :
-                            actualRank === 2 ? 'text-gray-500' :
-                              actualRank === 3 ? 'text-amber-700' :
-                                isCurrentUser ? 'text-book-green' :
-                                  'text-book-text/60'
+                          actualRank === 2 ? 'text-gray-500' :
+                            actualRank === 3 ? 'text-amber-700' :
+                              isCurrentUser ? 'text-book-green' :
+                                'text-book-text/60'
                           }`}>
                           #{actualRank}
                         </div>

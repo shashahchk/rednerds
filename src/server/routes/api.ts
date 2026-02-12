@@ -10,7 +10,7 @@ import type {
   SubmitScoreRequest,
   SubmitScoreResponse,
 } from '../../shared/api';
-import { getDailyIndex, getPuzzleIndexFromId } from '../../shared/nerdle-logic';
+import { getDailyIndex, getPuzzleIndexFromId, TOTAL_EQUATIONS } from '../../shared/nerdle-logic';
 
 type ErrorResponse = {
   status: 'error';
@@ -112,7 +112,7 @@ api.get('/puzzle', async (c) => {
 
     if (countStr) {
       const count = parseInt(countStr);
-      index = count; // Use the sequential ID as the puzzle index!
+      index = count % TOTAL_EQUATIONS;
       label = `Daily #${count}`;
     } else {
       // Legacy/Fallback for posts created before this change
