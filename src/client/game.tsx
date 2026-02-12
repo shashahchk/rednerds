@@ -6,12 +6,15 @@ import { useNerdle } from './hooks/useNerdle';
 import { Grid } from './components/Grid';
 import { Keyboard } from './components/Keyboard';
 import { getDailyEquation, generateShareText, getEquationByIndex } from '../shared/nerdle-logic';
+import { Leaderboard } from './components/Leaderboard';
 
 const App = () => {
   const [solution, setSolution] = useState('');
   const [puzzleLabel, setPuzzleLabel] = useState('');
   const [postId, setPostId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [serverGuesses, setServerGuesses] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchPuzzle() {
@@ -24,6 +27,21 @@ const App = () => {
           setSolution(eq);
           setPuzzleLabel(data.puzzleLabel || '');
           setPostId(data.postId);
+
+          // Check if user already played this puzzle
+          const key = data.postId || new Date().toISOString().split('T')[0];
+          try {
+            const lbRes = await fetch(`/api/leaderboard/${key}`);
+            const lbData = await lbRes.json();
+            if (lbData.userEntry) {
+              setShowLeaderboard(true);
+              if (lbData.userEntry.guesses) {
+                setServerGuesses(lbData.userEntry.guesses);
+              }
+            }
+          } catch (e) {
+            console.error('Error checking leaderboard:', e);
+          }
         } else {
           console.error('Failed to fetch puzzle');
           // Fallback
@@ -36,7 +54,7 @@ const App = () => {
         setLoading(false);
       }
     }
-    fetchPuzzle();
+    void fetchPuzzle();
   }, []);
 
   const {
@@ -93,7 +111,8 @@ const App = () => {
 
   const handleShare = async () => {
     try {
-      const text = generateShareText(guesses, solution, puzzleLabel || 'Daily');
+      const shareGuesses = guesses.length > 0 ? guesses : serverGuesses;
+      const text = generateShareText(shareGuesses, solution, puzzleLabel || 'Daily');
       await navigator.clipboard.writeText(text);
       setToast('Copied to clipboard!');
     } catch (e) {
@@ -104,20 +123,20 @@ const App = () => {
   // Render loading if solution not yet set
   if (loading || !solution) {
     return (
-      <div className="flex h-screen items-center justify-center bg-nerdle-dark text-white">
+      <div className="flex h-screen items-center justify-center bg-book-bg text-book-text">
         <div className="animate-spin text-4xl">⏳</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen max-h-screen bg-nerdle-dark text-white overflow-hidden">
+    <div className="flex flex-col h-screen max-h-screen bg-book-bg text-book-text overflow-hidden">
       {/* Header */}
       <header className="flex-none p-4 border-b border-gray-800 flex justify-between items-center relative">
         <div className="w-8"></div>
         <div className="flex flex-col items-center">
-          <h1 className="text-3xl font-bold tracking-widest text-nerdle-purple font-mono leading-none">
-            NERD<span className="text-nerdle-green">ITT</span>
+          <h1 className="text-3xl font-bold tracking-widest text-book-accent font-mono leading-none">
+            NERD<span className="text-book-green">ITT</span>
           </h1>
           {puzzleLabel && <span className="text-xs text-gray-500 font-mono mt-1">{puzzleLabel}</span>}
         </div>
@@ -154,11 +173,18 @@ const App = () => {
           </div>
         )}
 
-        {/* Game Over Message */}
+        {/* Leaderboard Modal (shown when user already completed the puzzle) */}
+        {showLeaderboard && (
+          <Leaderboard
+            date={postId || new Date().toISOString().split('T')[0] || ''}
+            onClose={() => setShowLeaderboard(false)}
+          />
+        )}
+
         {/* Game Over Modal */}
         {showModal && (
           <div className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-nerdle-gray border-2 border-nerdle-green p-6 rounded-lg shadow-2xl text-center animate-pop w-3/4 max-w-sm relative">
+            <div className="bg-book-paper border-2 border-book-green p-6 rounded-lg shadow-2xl text-center animate-pop w-3/4 max-w-sm relative">
               <button
                 onClick={() => setShowModal(false)}
                 className="absolute top-2 right-2 text-gray-400 hover:text-white"
@@ -172,7 +198,7 @@ const App = () => {
               <div className="flex flex-col gap-2">
                 <button
                   onClick={handleShare}
-                  className="bg-nerdle-purple text-white px-6 py-2 rounded font-bold hover:bg-purple-600 transition-colors flex items-center justify-center gap-2"
+                  className="bg-book-accent text-white px-6 py-2 rounded font-bold hover:bg-book-accent/80 transition-colors flex items-center justify-center gap-2"
                 >
                   Share Result 📋
                 </button>

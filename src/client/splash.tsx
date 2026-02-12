@@ -8,7 +8,7 @@ import { useNerdle } from './hooks/useNerdle';
 import { Grid } from './components/Grid';
 import { Keyboard } from './components/Keyboard';
 import { Leaderboard } from './components/Leaderboard';
-import { getDailyEquation, generateShareText, getPuzzleIndexFromId, getEquationByIndex } from '../shared/nerdle-logic';
+import { getDailyEquation, generateShareText, getEquationByIndex } from '../shared/nerdle-logic';
 import type { SubmitScoreRequest } from '../shared/api';
 
 export const Splash = () => {
@@ -20,6 +20,8 @@ export const Splash = () => {
   const [hasPlayedToday, setHasPlayedToday] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [postId, setPostId] = useState<string | undefined>(undefined);
+  const [puzzleLabel, setPuzzleLabel] = useState('');
+  const [serverGuesses, setServerGuesses] = useState<string[]>([]);
 
   // Check if user has already played (today or for this post)
   useEffect(() => {
@@ -40,6 +42,24 @@ export const Splash = () => {
         console.error('Error fetching init:', e);
       }
 
+      // Fetch puzzle info for the correct label and solution
+      try {
+        const puzzleRes = await fetch('/api/puzzle');
+        if (puzzleRes.ok) {
+          const puzzleData = await puzzleRes.json();
+          setPuzzleLabel(puzzleData.puzzleLabel || '');
+          const eq = getEquationByIndex(puzzleData.index);
+          setSolution(eq);
+          if (puzzleData.postId && !fetchedPostId) {
+            fetchedPostId = puzzleData.postId;
+            setPostId(fetchedPostId);
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching puzzle:', e);
+        setSolution(getDailyEquation());
+      }
+
       const key = fetchedPostId || today;
 
       try {
@@ -51,6 +71,10 @@ export const Splash = () => {
           console.log('[Splash] User already played:', result.userEntry);
           setHasPlayedToday(true);
           setScoreSubmitted(true);
+          setShowLeaderboard(true);
+          if (result.userEntry.guesses) {
+            setServerGuesses(result.userEntry.guesses);
+          }
         }
       } catch (error) {
         console.error('Error checking status:', error);
@@ -59,7 +83,7 @@ export const Splash = () => {
       }
     }
 
-    checkStatus();
+    void checkStatus();
   }, []);
 
   const [toast, setToast] = useState<string | null>(null);
@@ -73,8 +97,9 @@ export const Splash = () => {
 
   const handleShare = async () => {
     try {
-      const label = postId ? `Post` : 'Daily';
-      const text = generateShareText(guesses, solution, label);
+      // Use local guesses if available, fall back to server-stored guesses
+      const shareGuesses = guesses.length > 0 ? guesses : serverGuesses;
+      const text = generateShareText(shareGuesses, solution, puzzleLabel || 'Daily');
       await navigator.clipboard.writeText(text);
       setToast('Copied to clipboard!');
     } catch (e) {
@@ -82,16 +107,7 @@ export const Splash = () => {
     }
   };
 
-  // Resolve puzzle solution when Date or PostId changes
-  useEffect(() => {
-    if (postId) {
-      const index = getPuzzleIndexFromId(postId);
-      const eq = getEquationByIndex(index);
-      setSolution(eq);
-    } else {
-      setSolution(getDailyEquation());
-    }
-  }, [postId]);
+  // Solution is now fetched from /api/puzzle in checkStatus above
 
   const handleStartGame = () => {
     if (hasPlayedToday && !gameStarted) {
@@ -116,7 +132,8 @@ export const Splash = () => {
     errorMessage,
     onChar,
     onDelete,
-    onEnter
+    onEnter,
+    elapsedSeconds
   } = useNerdle({
     solution,
     storageKey: postId ? `nerdle-state-${postId}` : undefined
@@ -151,7 +168,9 @@ export const Splash = () => {
           date: currentDate,
           attempts: guesses.length,
           won: status === 'won',
-          postId: postId
+          postId: postId,
+          timeSeconds: elapsedSeconds,
+          guesses: guesses
         };
 
         console.log('Submitting score:', payload);
@@ -177,15 +196,20 @@ export const Splash = () => {
       }
     }
 
-    submitScore();
-  }, [status, guesses.length, currentDate, scoreSubmitted, postId]);
+    void submitScore();
+  }, [status, guesses.length, currentDate, scoreSubmitted, postId, elapsedSeconds, guesses]);
 
   if (gameStarted && solution) {
     return (
       <div className="flex flex-col h-screen w-full bg-book-bg text-book-text overflow-hidden">
         {/* Header */}
         <header className="flex-shrink-0 py-2 px-3 border-b-2 border-book-border bg-book-paper flex justify-between items-center shadow-sm">
-          <div className="w-8"></div>
+          <div className="w-16 text-left">
+            <div className="text-xs text-book-text/60">Time</div>
+            <div className="text-sm font-bold text-book-accent font-mono">
+              {Math.floor(elapsedSeconds / 60)}:{(elapsedSeconds % 60).toString().padStart(2, '0')}
+            </div>
+          </div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-book-accent">
             NERD<span className="text-book-green">ITT</span>
           </h1>
@@ -233,21 +257,15 @@ export const Splash = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={handleShare}
-                    className="flex-1 bg-nerdle-purple text-white px-4 py-3 rounded-lg font-bold hover:bg-purple-600 transition-colors shadow-md flex items-center justify-center"
+                    className="flex-1 bg-book-accent text-white px-4 py-3 rounded-lg font-bold hover:bg-book-accent/80 transition-colors shadow-md flex items-center justify-center"
                   >
                     Share 📋
                   </button>
                   <button
                     onClick={() => setShowLeaderboard(true)}
-                    className="flex-1 bg-book-accent text-white px-4 py-3 rounded-lg font-bold hover:bg-book-accent/90 transition-colors shadow-md"
-                  >
-                    Leaderboard
-                  </button>
-                  <button
-                    onClick={() => window.location.reload()}
                     className="flex-1 bg-book-green text-white px-4 py-3 rounded-lg font-bold hover:bg-book-correct transition-colors shadow-md"
                   >
-                    Play Again
+                    Leaderboard
                   </button>
                 </div>
               </div>
@@ -269,7 +287,8 @@ export const Splash = () => {
         {/* Leaderboard Modal */}
         {showLeaderboard && (
           <Leaderboard
-            date={currentDate}
+            key={`lb-${scoreSubmitted}`}
+            date={postId || currentDate}
             onClose={() => setShowLeaderboard(false)}
           />
         )}
@@ -377,7 +396,8 @@ export const Splash = () => {
       {/* Leaderboard Modal */}
       {showLeaderboard && (
         <Leaderboard
-          date={currentDate}
+          key={`lb-${scoreSubmitted}`}
+          date={postId || currentDate}
           onClose={() => setShowLeaderboard(false)}
         />
       )}

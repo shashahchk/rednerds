@@ -30,6 +30,10 @@ export type LeaderboardEntry = {
   attempts: number;
   timestamp: number;
   won: boolean;
+  timeSeconds: number;
+  consecutivePlays?: number;
+  avatarUrl?: string;
+  guesses?: string[];
 };
 
 export type SubmitScoreRequest = {
@@ -37,6 +41,8 @@ export type SubmitScoreRequest = {
   attempts: number;
   won: boolean;
   postId?: string | undefined;
+  timeSeconds: number;
+  guesses: string[];
 };
 
 export type SubmitScoreResponse = {
@@ -49,6 +55,7 @@ export type LeaderboardResponse = {
   type: 'leaderboard';
   date: string;
   postId?: string;
+  postCreatedAt?: string;
   entries: LeaderboardEntry[];
   userEntry?: LeaderboardEntry;
   userRank?: number;

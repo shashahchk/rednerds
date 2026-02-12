@@ -15,7 +15,7 @@ export function Grid({ guesses, currentGuess, solution, isInvalid }: GridProps) 
     return (
         <div className="grid grid-rows-6 gap-1.5 w-full max-w-md mx-auto">
             {guesses.map((guess, i) => (
-                <Row key={i} guess={guess} solution={solution} />
+                <Row key={i} guess={guess} solution={solution} isRevealing={i === guesses.length - 1} />
             ))}
             {guesses.length < 6 && (
                 <Row
@@ -37,9 +37,10 @@ interface RowProps {
     solution: string;
     isCurrent?: boolean;
     isInvalid?: boolean;
+    isRevealing?: boolean;
 }
 
-function Row({ guess, solution, isCurrent, isInvalid }: RowProps) {
+function Row({ guess, solution, isCurrent, isInvalid, isRevealing }: RowProps) {
     const statuses = !isCurrent && guess
         ? checkGuess(guess, solution)
         : Array(EQUATION_LENGTH).fill('EMPTY');
@@ -55,6 +56,8 @@ function Row({ guess, solution, isCurrent, isInvalid }: RowProps) {
                     char={char}
                     status={isCurrent ? 'EMPTY' : statuses[i]}
                     isCurrent={!!isCurrent}
+                    isRevealing={isRevealing}
+                    delay={i * 100}
                 />
             ))}
             {Array.from({ length: emptyCells }).map((_, i) => (
@@ -68,9 +71,11 @@ interface TileProps {
     char: string;
     status: CharStatus | 'EMPTY';
     isCurrent?: boolean;
+    isRevealing?: boolean | undefined;
+    delay?: number;
 }
 
-function Tile({ char, status, isCurrent }: TileProps) {
+function Tile({ char, status, isCurrent, isRevealing, delay = 0 }: TileProps) {
     // Styles based on status
     const base = "flex items-center justify-center border-2 font-bold select-none aspect-square rounded transition-all duration-500 transform text-base sm:text-lg shadow-sm font-mono";
 
@@ -85,7 +90,10 @@ function Tile({ char, status, isCurrent }: TileProps) {
     };
 
     return (
-        <div className={clsx(base, statusStyles[status])}>
+        <div
+            className={clsx(base, statusStyles[status], isRevealing && "animate-flip")}
+            style={isRevealing ? { animationDelay: `${delay}ms` } : undefined}
+        >
             {char}
         </div>
     );

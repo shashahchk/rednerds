@@ -2,82 +2,81 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-    --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
 
-    /* Relaxing beige/cream book theme */
-    --color-book-bg: #f5f1e8;
-    --color-book-paper: #fdfbf7;
-    --color-book-text: #2d2416;
-    --color-book-border: #d4c5a9;
-    --color-book-accent: #8b7355;
-    --color-book-green: #7a9b76;
-    --color-book-correct: #6b8e6b;
-    --color-book-present: #c9a961;
-    --color-book-absent: #b8a892;
+  /* Relaxing beige/cream book theme */
+  --color-book-bg: #f5f1e8;
+  --color-book-paper: #fdfbf7;
+  --color-book-text: #2d2416;
+  --color-book-border: #d4c5a9;
+  --color-book-accent: #8b7355;
+  --color-book-green: #7a9b76;
+  --color-book-correct: #6b8e6b;
+  --color-book-present: #c9a961;
+  --color-book-absent: #b8a892;
 
-    --animate-flip: flip 0.6s ease-in-out forwards;
-    --animate-shake: shake 0.6s ease-in-out;
-    --animate-pop: pop 0.1s ease-in-out;
+  --animate-flip: flip 0.6s ease-in-out forwards;
+  --animate-shake: shake 0.6s ease-in-out;
+  --animate-pop: pop 0.1s ease-in-out;
 }
 
 @keyframes flip {
-    0% {
-        transform: rotateX(0deg);
-    }
+  0% {
+    transform: rotateX(0deg);
+  }
 
-    50% {
-        transform: rotateX(90deg);
-    }
+  50% {
+    transform: rotateX(90deg);
+  }
 
-    100% {
-        transform: rotateX(0deg);
-    }
+  100% {
+    transform: rotateX(0deg);
+  }
 }
 
 @keyframes shake {
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
 
-    10%,
-    90% {
-        transform: translate3d(-1px, 0, 0);
-    }
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
 
-    20%,
-    80% {
-        transform: translate3d(2px, 0, 0);
-    }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
 
-    30%,
-    50%,
-    70% {
-        transform: translate3d(-4px, 0, 0);
-    }
-
-    40%,
-    60% {
-        transform: translate3d(4px, 0, 0);
-    }
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
+  }
 }
 
 @keyframes pop {
-    0% {
-        transform: scale(1);
-    }
+  0% {
+    transform: scale(1);
+  }
 
-    50% {
-        transform: scale(1.1);
-    }
+  50% {
+    transform: scale(1.1);
+  }
 
-    100% {
-        transform: scale(1);
-    }
+  100% {
+    transform: scale(1);
+  }
 }
 
 body {
-    background-color: var(--color-book-bg);
-    color: var(--color-book-text);
-    font-family: var(--font-sans);
+  background-color: var(--color-book-bg);
+  color: var(--color-book-text);
+  font-family: var(--font-sans);
 }

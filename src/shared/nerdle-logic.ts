@@ -8,12 +8,12 @@ export const EQUATION_LENGTH = 8;
 function evaluateExpression(expr: string): number {
   // Remove whitespace
   expr = expr.replace(/\s+/g, '');
-  
+
   let pos = 0;
-  
+
   const peek = (): string => expr[pos] || '';
   const consume = (): string => expr[pos++] || '';
-  
+
   const parseNumber = (): number => {
     let num = '';
     while (pos < expr.length && /[0-9]/.test(peek())) {
@@ -21,7 +21,7 @@ function evaluateExpression(expr: string): number {
     }
     return parseInt(num, 10);
   };
-  
+
   const parseFactor = (): number => {
     if (peek() === '(') {
       consume(); // '('
@@ -29,23 +29,23 @@ function evaluateExpression(expr: string): number {
       consume(); // ')'
       return result;
     }
-    
+
     if (peek() === '-') {
       consume();
       return -parseFactor();
     }
-    
+
     if (peek() === '+') {
       consume();
       return parseFactor();
     }
-    
+
     return parseNumber();
   };
-  
+
   const parseTerm = (): number => {
     let result = parseFactor();
-    
+
     while (peek() === '*' || peek() === '/') {
       const op = consume();
       const right = parseFactor();
@@ -56,13 +56,13 @@ function evaluateExpression(expr: string): number {
         result /= right;
       }
     }
-    
+
     return result;
   };
-  
+
   const parseExpression = (): number => {
     let result = parseTerm();
-    
+
     while (peek() === '+' || peek() === '-') {
       const op = consume();
       const right = parseTerm();
@@ -72,10 +72,10 @@ function evaluateExpression(expr: string): number {
         result -= right;
       }
     }
-    
+
     return result;
   };
-  
+
   return parseExpression();
 }
 
@@ -203,17 +203,28 @@ export function checkGuess(guess: string, solution: string): CharStatus[] {
 
 export function generateEffect(guess: string, solution: string): string {
   const statuses = checkGuess(guess, solution);
-  return statuses.map(s => {
-    switch (s) {
-      case 'CORRECT': return '🟩';
-      case 'PRESENT': return '🟪';
-      default: return '⬛';
-    }
-  }).join('');
+  return statuses
+    .map((s) => {
+      switch (s) {
+        case 'CORRECT':
+          return '🟩';
+        case 'PRESENT':
+          return '🟨';
+        default:
+          return '⬛';
+      }
+    })
+    .join('');
 }
 
-export function generateShareText(guesses: string[], solution: string, label: string): string {
-    const title = `nerd-itt ${label} ${guesses.length}/6`;
-    const grid = guesses.map(guess => generateEffect(guess, solution)).join('\n');
-    return `${title}\n\n${grid}`;
+export function generateShareText(
+  guesses: string[],
+  solution: string,
+  label: string
+): string {
+  const title = `nerd-itt ${label} ${guesses.length}/6`;
+  const grid = guesses
+    .map((guess) => generateEffect(guess, solution))
+    .join('\n');
+  return `${title}\n\n${grid}`;
 }
