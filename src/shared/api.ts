@@ -21,6 +21,8 @@ export type DailyPuzzleResponse = {
   type: 'daily-puzzle';
   index: number;
   date: string;
+  puzzleLabel?: string;
+  postId?: string;
 };
 
 export type LeaderboardEntry = {
@@ -34,6 +36,7 @@ export type SubmitScoreRequest = {
   date: string;
   attempts: number;
   won: boolean;
+  postId?: string | undefined;
 };
 
 export type SubmitScoreResponse = {
@@ -45,6 +48,7 @@ export type SubmitScoreResponse = {
 export type LeaderboardResponse = {
   type: 'leaderboard';
   date: string;
+  postId?: string;
   entries: LeaderboardEntry[];
   userEntry?: LeaderboardEntry;
   userRank?: number;

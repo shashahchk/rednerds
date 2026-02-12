@@ -1,6 +1,6 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-  "name": "reddnerdds",
+  "name": "nerd-itt",
   "post": {
     "dir": "dist/client",
     "entrypoints": {
@@ -21,7 +21,7 @@
     "items": [
       {
         "label": "Create a new post",
-        "description": "reddnerdds",
+        "description": "nerd-itt",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-create"
@@ -46,6 +46,6 @@
     "build": "vite build"
   },
   "dev": {
-    "subreddit": "reddnerdds_dev"
+    "subreddit": "nerd_itt_dev"
   }
 }

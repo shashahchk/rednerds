@@ -10,7 +10,7 @@ import type {
   SubmitScoreRequest,
   SubmitScoreResponse,
 } from '../../shared/api';
-import { getDailyIndex } from '../../shared/nerdle-logic';
+import { getDailyIndex, getPuzzleIndexFromId } from '../../shared/nerdle-logic';
 
 type ErrorResponse = {
   status: 'error';
@@ -98,22 +98,46 @@ api.post('/decrement', async (c) => {
   });
 });
 
-api.get('/daily', (c) => {
+api.get('/puzzle', async (c) => {
+  const { postId } = context;
   const now = new Date();
-  const index = getDailyIndex(now);
   const dateStr = now.toISOString().split('T')[0] ?? '2025-01-01';
   
+  let index: number;
+  let label: string;
+
+  if (postId) {
+    // Try to get the sequential ID for this post
+    const countStr = await redis.get(`post_puzzle_count:${postId}`);
+    
+    if (countStr) {
+        const count = parseInt(countStr);
+        index = count; // Use the sequential ID as the puzzle index!
+        label = `Daily #${count}`;
+    } else {
+        // Legacy/Fallback for posts created before this change
+        index = getPuzzleIndexFromId(postId);
+        label = `Post`;
+    }
+  } else {
+    // Fallback to daily if no post context
+    index = getDailyIndex(now);
+    label = `Daily ${dateStr}`;
+  }
+
   return c.json<DailyPuzzleResponse>({
     type: 'daily-puzzle',
     index,
     date: dateStr,
+    puzzleLabel: label,
+    postId
   });
 });
 
 api.post('/leaderboard/submit', async (c) => {
   try {
     const body = await c.req.json<SubmitScoreRequest>();
-    const { date, attempts, won } = body;
+    const { date, attempts, won, postId } = body;
     
     const username = await reddit.getCurrentUsername();
     if (!username) {
@@ -124,11 +148,13 @@ api.post('/leaderboard/submit', async (c) => {
       );
     }
 
-    console.log(`Submitting score for ${username}: ${attempts} attempts, won: ${won}, date: ${date}`);
+    console.log(`Submitting score for ${username}: ${attempts} attempts, won: ${won}, date: ${date}, postId: ${postId}`);
 
-    // Redis key for leaderboard sorted by attempts (lower is better)
-    const leaderboardKey = `leaderboard:${date}`;
-    const userKey = `user:${username}:${date}`;
+    // Redis key for leaderboard
+    // If postId provided, use post-specific leaderboard. Otherwise use daily date.
+    const leaderboardKey = postId ? `leaderboard:post:${postId}` : `leaderboard:${date}`;
+    // User key also needs to be unique per leaderboard context
+    const userKey = postId ? `user:${username}:post:${postId}` : `user:${username}:${date}`;
     
     // ONE ENTRY PER USER PER DAY: Check if user already submitted for this day
     // Users can only play once per day, so reject duplicate submissions
@@ -181,10 +207,12 @@ api.post('/leaderboard/submit', async (c) => {
 
 api.get('/leaderboard/:date', async (c) => {
   try {
-    const date = c.req.param('date');
-    const leaderboardKey = `leaderboard:${date}`;
+    const id = c.req.param('date'); // Could be date or postId
+    // Simple heuristic: Dates contain hydhens (YYYY-MM-DD), IDs typically don't or start with t3_
+    const isDate = id.includes('-');
+    const leaderboardKey = isDate ? `leaderboard:${id}` : `leaderboard:post:${id}`;
     
-    console.log(`Fetching leaderboard for date: ${date}`);
+    console.log(`Fetching leaderboard for ${isDate ? 'date' : 'post'}: ${id}`);
     
     // Get top 100 players (sorted by score ascending)
     const topPlayers = await redis.zRange(leaderboardKey, 0, 99);
@@ -194,7 +222,7 @@ api.get('/leaderboard/:date', async (c) => {
     const entries: LeaderboardEntry[] = [];
     for (const player of topPlayers) {
       const username = player.member;
-      const userKey = `user:${username}:${date}`;
+      const userKey = isDate ? `user:${username}:${id}` : `user:${username}:post:${id}`;
       const data = await redis.get(userKey);
       console.log(`Fetching ${userKey}: ${data ? 'found' : 'not found'}`);
       if (data) {
@@ -214,8 +242,9 @@ api.get('/leaderboard/:date', async (c) => {
     let userRank: number | undefined;
     
     if (currentUsername) {
-      const userKey = `user:${currentUsername}:${date}`;
+      const userKey = isDate ? `user:${currentUsername}:${id}` : `user:${currentUsername}:post:${id}`;
       const userData = await redis.get(userKey);
+
       console.log(`Current user ${currentUsername} data: ${userData ? 'found' : 'not found'}`);
       if (userData) {
         try {
@@ -231,7 +260,8 @@ api.get('/leaderboard/:date', async (c) => {
     
     return c.json<LeaderboardResponse>({
       type: 'leaderboard',
-      date,
+      date: isDate ? id : '', // Empty date if it's a post ID? Or maybe just return ID
+      postId: !isDate ? id : undefined,
       entries,
       userEntry,
       userRank,

@@ -94,6 +94,15 @@ export function getDailyIndex(dateObj: Date = new Date()): number {
   return Math.abs(hash) % EQUATIONS.length;
 }
 
+export function getPuzzleIndexFromId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % EQUATIONS.length;
+}
+
 export function getEquationByIndex(index: number): string {
   return EQUATIONS[index] ?? EQUATIONS[0] ?? '10+20=30';
 }
@@ -190,4 +199,21 @@ export function checkGuess(guess: string, solution: string): CharStatus[] {
   }
 
   return result;
+}
+
+export function generateEffect(guess: string, solution: string): string {
+  const statuses = checkGuess(guess, solution);
+  return statuses.map(s => {
+    switch (s) {
+      case 'CORRECT': return '🟩';
+      case 'PRESENT': return '🟪';
+      default: return '⬛';
+    }
+  }).join('');
+}
+
+export function generateShareText(guesses: string[], solution: string, label: string): string {
+    const title = `nerd-itt ${label} ${guesses.length}/6`;
+    const grid = guesses.map(guess => generateEffect(guess, solution)).join('\n');
+    return `${title}\n\n${grid}`;
 }

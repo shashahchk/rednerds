@@ -8,7 +8,7 @@ import { useNerdle } from './hooks/useNerdle';
 import { Grid } from './components/Grid';
 import { Keyboard } from './components/Keyboard';
 import { Leaderboard } from './components/Leaderboard';
-import { getDailyEquation } from '../shared/nerdle-logic';
+import { getDailyEquation, generateShareText, getPuzzleIndexFromId, getEquationByIndex } from '../shared/nerdle-logic';
 import type { SubmitScoreRequest } from '../shared/api';
 
 export const Splash = () => {
@@ -19,30 +19,79 @@ export const Splash = () => {
   const [scoreSubmitted, setScoreSubmitted] = useState(false);
   const [hasPlayedToday, setHasPlayedToday] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  const [postId, setPostId] = useState<string | undefined>(undefined);
 
-  // Check if user has already played today
+  // Check if user has already played (today or for this post)
   useEffect(() => {
-    async function checkTodayStatus() {
+    async function checkStatus() {
       const today = new Date().toISOString().split('T')[0] || '';
       setCurrentDate(today);
-      
+
+      let fetchedPostId: string | undefined;
+
       try {
-        const response = await fetch(`/api/leaderboard/${today}`);
+        const initRes = await fetch('/api/init');
+        if (initRes.ok) {
+          const initData = await initRes.json();
+          fetchedPostId = initData.postId;
+          setPostId(fetchedPostId);
+        }
+      } catch (e) {
+        console.error('Error fetching init:', e);
+      }
+
+      const key = fetchedPostId || today;
+
+      try {
+        console.log('[Splash] Checking status for:', key);
+        const response = await fetch(`/api/leaderboard/${key}`);
         const result = await response.json();
-        
+
         if (result.userEntry) {
+          console.log('[Splash] User already played:', result.userEntry);
           setHasPlayedToday(true);
           setScoreSubmitted(true);
         }
       } catch (error) {
-        console.error('Error checking today status:', error);
+        console.error('Error checking status:', error);
       } finally {
         setCheckingStatus(false);
       }
     }
-    
-    checkTodayStatus();
+
+    checkStatus();
   }, []);
+
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const handleShare = async () => {
+    try {
+      const label = postId ? `Post` : 'Daily';
+      const text = generateShareText(guesses, solution, label);
+      await navigator.clipboard.writeText(text);
+      setToast('Copied to clipboard!');
+    } catch (e) {
+      setToast('Failed to copy');
+    }
+  };
+
+  // Resolve puzzle solution when Date or PostId changes
+  useEffect(() => {
+    if (postId) {
+      const index = getPuzzleIndexFromId(postId);
+      const eq = getEquationByIndex(index);
+      setSolution(eq);
+    } else {
+      setSolution(getDailyEquation());
+    }
+  }, [postId]);
 
   const handleStartGame = () => {
     if (hasPlayedToday && !gameStarted) {
@@ -50,12 +99,13 @@ export const Splash = () => {
       setShowLeaderboard(true);
       return;
     }
-    
-    setSolution(getDailyEquation());
+
     setGameStarted(true);
     if (!currentDate) {
       setCurrentDate(new Date().toISOString().split('T')[0] || '');
     }
+    // Attempt to focus the window to capture keyboard events immediately
+    window.focus();
   };
 
   const {
@@ -67,7 +117,10 @@ export const Splash = () => {
     onChar,
     onDelete,
     onEnter
-  } = useNerdle({ solution });
+  } = useNerdle({
+    solution,
+    storageKey: postId ? `nerdle-state-${postId}` : undefined
+  });
 
   // Physical Keyboard handling
   useEffect(() => {
@@ -78,8 +131,9 @@ export const Splash = () => {
         onEnter();
       } else if (e.key === 'Backspace' || e.key === 'Delete') {
         onDelete();
-      } else if (/^[0-9+\-*/=]$/.test(e.key)) {
-        onChar(e.key);
+      } else if (/^[0-9+\-*/=xX]$/.test(e.key)) {
+        const char = e.key.toLowerCase() === 'x' ? '*' : e.key;
+        onChar(char);
       }
     };
 
@@ -97,6 +151,7 @@ export const Splash = () => {
           date: currentDate,
           attempts: guesses.length,
           won: status === 'won',
+          postId: postId
         };
 
         console.log('Submitting score:', payload);
@@ -123,7 +178,7 @@ export const Splash = () => {
     }
 
     submitScore();
-  }, [status, guesses.length, currentDate, scoreSubmitted]);
+  }, [status, guesses.length, currentDate, scoreSubmitted, postId]);
 
   if (gameStarted && solution) {
     return (
@@ -156,10 +211,10 @@ export const Splash = () => {
           </div>
 
           {/* Messages / Toast */}
-          {errorMessage && (
+          {(errorMessage || toast) && (
             <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-[90%]">
               <div className="bg-book-text text-book-paper px-4 py-2 rounded-lg font-bold shadow-lg text-sm">
-                {errorMessage}
+                {errorMessage || toast}
               </div>
             </div>
           )}
@@ -176,6 +231,12 @@ export const Splash = () => {
                   {status === 'won' ? 'Solved' : 'Used'} {guesses.length} {guesses.length === 1 ? 'guess' : 'guesses'}
                 </p>
                 <div className="flex gap-2">
+                  <button
+                    onClick={handleShare}
+                    className="flex-1 bg-nerdle-purple text-white px-4 py-3 rounded-lg font-bold hover:bg-purple-600 transition-colors shadow-md flex items-center justify-center"
+                  >
+                    Share 📋
+                  </button>
                   <button
                     onClick={() => setShowLeaderboard(true)}
                     className="flex-1 bg-book-accent text-white px-4 py-3 rounded-lg font-bold hover:bg-book-accent/90 transition-colors shadow-md"
@@ -217,11 +278,11 @@ export const Splash = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-book-bg overflow-y-auto">
-      <div className="flex-1 flex flex-col justify-center items-center px-4 py-8">
-        <div className="flex flex-col items-center gap-6 max-w-md w-full">
-          <div className="flex items-center justify-center gap-3 w-full">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-center text-book-accent tracking-tight">
+    <div className="flex flex-col h-screen bg-book-bg overflow-hidden">
+      <div className="flex-1 flex flex-col justify-center items-center px-4 py-2 min-h-0">
+        <div className="flex flex-col items-center gap-2 max-w-md w-full">
+          <div className="flex items-center justify-center gap-3 w-full shrink-0">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-center text-book-accent tracking-tight">
               NERD<span className="text-book-green">ITT</span>
             </h1>
             <button
@@ -229,51 +290,59 @@ export const Splash = () => {
                 setCurrentDate(new Date().toISOString().split('T')[0] || '');
                 setShowLeaderboard(true);
               }}
-              className="text-2xl hover:scale-110 transition-transform"
+              className="text-xl hover:scale-110 transition-transform"
               aria-label="View Leaderboard"
             >
               🏆
             </button>
           </div>
-          
-          <div className="flex flex-col items-center gap-4 text-center w-full">
-            <p className="text-lg text-book-text font-medium">
+
+          <div className="flex flex-col items-center gap-2 text-center w-full min-h-0">
+            <p className="text-base text-book-text font-medium shrink-0">
               Hey {context.username ?? 'user'} 👋
             </p>
-            <p className="text-sm text-book-text/80 leading-relaxed">
-              A daily math puzzle. Guess the equation in up to 6 tries. One puzzle per day!
+            <p className="text-xs text-book-text/80 leading-tight shrink-0">
+              A daily math puzzle. Guess the equation in 6 tries.
             </p>
-            
-            <div className="bg-book-paper border-2 border-book-border rounded-xl p-5 mt-2 w-full shadow-md">
-              <p className="text-sm text-book-accent mb-3 font-bold">How to play:</p>
-              <ul className="text-xs text-book-text/70 space-y-2 text-left leading-relaxed">
+
+            <div className="bg-book-paper border-2 border-book-border rounded-xl p-3 mt-1 w-full shadow-md overflow-y-auto shrink">
+              <p className="text-xs text-book-accent mb-2 font-bold">How to play:</p>
+              <ul className="text-xs text-book-text/70 space-y-1 text-left leading-tight">
                 <li>• Guess the 8-character equation</li>
                 <li>• Must be a valid calculation (e.g., <span className="font-mono font-semibold text-book-text">12+34=46</span>)</li>
-                <li>• <span className="inline-block w-4 h-4 bg-book-correct rounded align-middle"></span> Green = correct position</li>
-                <li>• <span className="inline-block w-4 h-4 bg-book-present rounded align-middle"></span> Gold = wrong position</li>
-                <li>• <span className="inline-block w-4 h-4 bg-book-absent rounded align-middle"></span> Gray = not in equation</li>
+                <li>• <span className="inline-block w-3 h-3 bg-book-correct rounded align-middle"></span> Green = correct position</li>
+                <li>• <span className="inline-block w-3 h-3 bg-book-present rounded align-middle"></span> Gold = wrong position</li>
+                <li>• <span className="inline-block w-3 h-3 bg-book-absent rounded align-middle"></span> Gray = not in equation</li>
               </ul>
             </div>
           </div>
 
           {checkingStatus ? (
-            <div className="text-center text-book-text/60 py-3">Loading...</div>
+            <div className="text-center text-book-text/60 py-2 shrink-0">Loading...</div>
           ) : hasPlayedToday ? (
-            <div className="flex flex-col gap-3 w-full max-w-xs mt-2">
-              <div className="bg-book-green/10 border-2 border-book-green rounded-xl p-4 text-center">
-                <p className="text-sm text-book-accent font-bold mb-1">✓ Completed Today!</p>
-                <p className="text-xs text-book-text/70">Come back tomorrow for the next puzzle</p>
+            <div className="flex flex-col gap-2 w-full max-w-xs mt-1 shrink-0">
+              <div className="bg-book-green/10 border-2 border-book-green rounded-xl p-3 text-center">
+                <p className="text-sm text-book-accent font-bold mb-0.5">✓ Puzzle Completed!</p>
+                <p className="text-[10px] text-book-text/70">Check back later or try another post</p>
               </div>
-              <button
-                className="flex items-center justify-center bg-book-accent text-white font-bold text-base w-full h-12 rounded-xl cursor-pointer hover:bg-book-accent/90 transition-all shadow-lg hover:shadow-xl active:scale-95"
-                onClick={() => setShowLeaderboard(true)}
-              >
-                View Leaderboard
-              </button>
+              <div className="flex gap-2 w-full">
+                <button
+                  className="flex-1 flex items-center justify-center bg-book-accent text-white font-bold text-sm h-10 rounded-xl cursor-pointer hover:bg-book-accent/90 transition-all shadow-md active:scale-95"
+                  onClick={handleShare}
+                >
+                  Share 📋
+                </button>
+                <button
+                  className="flex-1 flex items-center justify-center bg-book-green text-white font-bold text-sm h-10 rounded-xl cursor-pointer hover:bg-book-correct transition-all shadow-md active:scale-95"
+                  onClick={() => setShowLeaderboard(true)}
+                >
+                  Leaderboard
+                </button>
+              </div>
             </div>
           ) : (
             <button
-              className="flex items-center justify-center bg-book-green text-white font-bold text-base w-full max-w-xs h-12 rounded-xl cursor-pointer hover:bg-book-correct transition-all shadow-lg hover:shadow-xl active:scale-95 mt-2"
+              className="flex items-center justify-center bg-book-green text-white font-bold text-base w-full max-w-xs h-12 rounded-xl cursor-pointer hover:bg-book-correct transition-all shadow-lg hover:shadow-xl active:scale-95 mt-1 shrink-0"
               onClick={handleStartGame}
             >
               Start Playing
@@ -282,7 +351,7 @@ export const Splash = () => {
         </div>
       </div>
 
-      <footer className="flex-shrink-0 flex justify-center gap-3 text-xs text-book-text/50 py-4">
+      <footer className="flex-shrink-0 flex justify-center gap-3 text-[10px] text-book-text/50 py-2">
         <button
           className="cursor-pointer hover:text-book-accent transition-colors"
           onClick={() => navigateTo('https://developers.reddit.com/docs')}
