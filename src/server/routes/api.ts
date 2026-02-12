@@ -130,14 +130,15 @@ api.post('/leaderboard/submit', async (c) => {
     const leaderboardKey = `leaderboard:${date}`;
     const userKey = `user:${username}:${date}`;
     
-    // Check if user already submitted for this day
+    // ONE ENTRY PER USER PER DAY: Check if user already submitted for this day
+    // Users can only play once per day, so reject duplicate submissions
     const existingScore = await redis.get(userKey);
     if (existingScore) {
       console.log(`User ${username} already submitted for ${date}. Existing score:`, existingScore);
       const rank = await redis.zRank(leaderboardKey, username);
       return c.json<SubmitScoreResponse>({
         type: 'submit-score',
-        success: true, // Changed to true since they already have a score
+        success: true, // Return true since they already have a valid submission
         rank: rank !== undefined ? rank + 1 : undefined,
       });
     }

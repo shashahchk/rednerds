@@ -71,7 +71,7 @@ export function Leaderboard({ date, onClose }: LeaderboardProps) {
                       <div>
                         <div className="font-semibold text-book-text">{data.userEntry.username}</div>
                         <div className="text-xs text-book-text/70">
-                          {data.userEntry.attempts} {data.userEntry.attempts === 1 ? 'attempt' : 'attempts'}
+                          {data.userEntry.attempts} {data.userEntry.attempts === 1 ? 'guess' : 'guesses'}
                         </div>
                       </div>
                     </div>
@@ -104,7 +104,7 @@ export function Leaderboard({ date, onClose }: LeaderboardProps) {
                       <div>
                         <div className="font-medium text-book-text text-sm">{entry.username}</div>
                         <div className="text-xs text-book-text/60">
-                          {entry.attempts} {entry.attempts === 1 ? 'try' : 'tries'}
+                          {entry.attempts} {entry.attempts === 1 ? 'guess' : 'guesses'}
                         </div>
                       </div>
                     </div>

@@ -17,11 +17,45 @@ export const Splash = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
   const [scoreSubmitted, setScoreSubmitted] = useState(false);
+  const [hasPlayedToday, setHasPlayedToday] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
+  // Check if user has already played today
+  useEffect(() => {
+    async function checkTodayStatus() {
+      const today = new Date().toISOString().split('T')[0] || '';
+      setCurrentDate(today);
+      
+      try {
+        const response = await fetch(`/api/leaderboard/${today}`);
+        const result = await response.json();
+        
+        if (result.userEntry) {
+          setHasPlayedToday(true);
+          setScoreSubmitted(true);
+        }
+      } catch (error) {
+        console.error('Error checking today status:', error);
+      } finally {
+        setCheckingStatus(false);
+      }
+    }
+    
+    checkTodayStatus();
+  }, []);
 
   const handleStartGame = () => {
+    if (hasPlayedToday && !gameStarted) {
+      // Already played, just show leaderboard
+      setShowLeaderboard(true);
+      return;
+    }
+    
     setSolution(getDailyEquation());
     setGameStarted(true);
-    setCurrentDate(new Date().toISOString().split('T')[0] || '');
+    if (!currentDate) {
+      setCurrentDate(new Date().toISOString().split('T')[0] || '');
+    }
   };
 
   const {
@@ -137,9 +171,9 @@ export const Splash = () => {
                 <h2 className="text-xl sm:text-2xl font-bold mb-3 text-book-accent">
                   {status === 'won' ? 'Calculation Correct!' : 'Calculation Failed'}
                 </h2>
-                <p className="mb-2 text-lg sm:text-xl tracking-wider text-book-text font-bold">{solution}</p>
+                <p className="mb-2 text-lg sm:text-xl tracking-wider text-book-text font-bold font-mono">{solution}</p>
                 <p className="mb-4 text-sm text-book-text/60">
-                  Solved in {guesses.length} {guesses.length === 1 ? 'attempt' : 'attempts'}
+                  {status === 'won' ? 'Solved' : 'Used'} {guesses.length} {guesses.length === 1 ? 'guess' : 'guesses'}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -207,7 +241,7 @@ export const Splash = () => {
               Hey {context.username ?? 'user'} 👋
             </p>
             <p className="text-sm text-book-text/80 leading-relaxed">
-              A daily math puzzle game. Guess the calculation in 6 tries!
+              A daily math puzzle. Guess the equation in up to 6 tries. One puzzle per day!
             </p>
             
             <div className="bg-book-paper border-2 border-book-border rounded-xl p-5 mt-2 w-full shadow-md">
@@ -222,12 +256,29 @@ export const Splash = () => {
             </div>
           </div>
 
-          <button
-            className="flex items-center justify-center bg-book-green text-white font-bold text-base w-full max-w-xs h-12 rounded-xl cursor-pointer hover:bg-book-correct transition-all shadow-lg hover:shadow-xl active:scale-95 mt-2"
-            onClick={handleStartGame}
-          >
-            Start Playing
-          </button>
+          {checkingStatus ? (
+            <div className="text-center text-book-text/60 py-3">Loading...</div>
+          ) : hasPlayedToday ? (
+            <div className="flex flex-col gap-3 w-full max-w-xs mt-2">
+              <div className="bg-book-green/10 border-2 border-book-green rounded-xl p-4 text-center">
+                <p className="text-sm text-book-accent font-bold mb-1">✓ Completed Today!</p>
+                <p className="text-xs text-book-text/70">Come back tomorrow for the next puzzle</p>
+              </div>
+              <button
+                className="flex items-center justify-center bg-book-accent text-white font-bold text-base w-full h-12 rounded-xl cursor-pointer hover:bg-book-accent/90 transition-all shadow-lg hover:shadow-xl active:scale-95"
+                onClick={() => setShowLeaderboard(true)}
+              >
+                View Leaderboard
+              </button>
+            </div>
+          ) : (
+            <button
+              className="flex items-center justify-center bg-book-green text-white font-bold text-base w-full max-w-xs h-12 rounded-xl cursor-pointer hover:bg-book-correct transition-all shadow-lg hover:shadow-xl active:scale-95 mt-2"
+              onClick={handleStartGame}
+            >
+              Start Playing
+            </button>
+          )}
         </div>
       </div>
 
