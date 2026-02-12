@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import { context, redis, reddit } from '@devvit/web/server';
 import type {
+  DailyPuzzleResponse,
   DecrementResponse,
   IncrementResponse,
   InitResponse,
 } from '../../shared/api';
+import { getDailyIndex } from '../../shared/nerdle-logic';
 
 type ErrorResponse = {
   status: 'error';
@@ -89,5 +91,17 @@ api.post('/decrement', async (c) => {
     count,
     postId,
     type: 'decrement',
+  });
+});
+
+api.get('/daily', (c) => {
+  const now = new Date();
+  const index = getDailyIndex(now);
+  const dateStr = now.toISOString().split('T')[0] ?? '2025-01-01';
+  
+  return c.json<DailyPuzzleResponse>({
+    type: 'daily-puzzle',
+    index,
+    date: dateStr,
   });
 });

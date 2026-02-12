@@ -1,1 +1,80 @@
-@import 'tailwindcss';
+/* Import Font */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+    --font-mono: "Space Mono", monospace;
+
+    --color-nerdle-dark: #0f1115;
+    --color-nerdle-gray: #3a3a3c;
+    --color-nerdle-purple: #8208e6;
+    --color-nerdle-green: #00e676;
+    /* Vibrant Green */
+    --color-nerdle-black: #121213;
+
+    --animate-flip: flip 0.6s ease-in-out forwards;
+    --animate-shake: shake 0.6s ease-in-out;
+    --animate-pop: pop 0.1s ease-in-out;
+}
+
+@keyframes flip {
+    0% {
+        transform: rotateX(0deg);
+    }
+
+    50% {
+        transform: rotateX(90deg);
+    }
+
+    100% {
+        transform: rotateX(0deg);
+    }
+}
+
+@keyframes shake {
+
+    10%,
+    90% {
+        transform: translate3d(-1px, 0, 0);
+    }
+
+    20%,
+    80% {
+        transform: translate3d(2px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+        transform: translate3d(-4px, 0, 0);
+    }
+
+    40%,
+    60% {
+        transform: translate3d(4px, 0, 0);
+    }
+}
+
+@keyframes pop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Import Font */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+body {
+    background-color: var(--color-nerdle-dark);
+    color: white;
+    font-family: var(--font-mono);
+}

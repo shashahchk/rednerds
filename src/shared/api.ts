@@ -16,3 +16,9 @@ export type DecrementResponse = {
   postId: string;
   count: number;
 };
+
+export type DailyPuzzleResponse = {
+  type: 'daily-puzzle';
+  index: number;
+  date: string;
+};

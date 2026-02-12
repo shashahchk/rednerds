@@ -44,5 +44,8 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build"
+  },
+  "dev": {
+    "subreddit": "nerd_itt_dev"
   }
 }

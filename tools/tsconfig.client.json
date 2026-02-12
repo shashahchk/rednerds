@@ -3,10 +3,14 @@
   "compilerOptions": {
     "outDir": "../dist/types/client",
     "tsBuildInfoFile": "../dist/types/client/tsconfig.tsbuildinfo",
-    "customConditions": ["browser"],
+    "customConditions": [
+      "browser"
+    ],
     "rootDir": "../src/client"
   },
-  "include": ["../src/client/**/*"],
+  "include": [
+    "../src/client/**/*"
+  ],
   "exclude": [],
   "references": [
     {
